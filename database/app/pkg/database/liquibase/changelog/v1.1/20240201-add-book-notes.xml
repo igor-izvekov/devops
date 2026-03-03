@@ -9,8 +9,8 @@
         <comment>Add notes column to books table</comment>
         <addColumn tableName="books">
             <column name="notes" type="text"/>
-        <addColumn>
-    <changeSet>
+        </addColumn>
+    </changeSet>
 
     <changeSet id="20240201-2" author="developer" context="dev">
         <comment>Add sample notes for development</comment>
@@ -18,5 +18,5 @@
             <column name="notes" value="Great book, highly recommend!"/>
             <where>rating >= 4.5</where>
         </update>
-    <changeSet>
+    </changeSet>
 </databaseChangeLog>

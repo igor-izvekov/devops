@@ -1,0 +1,197 @@
+name: Database CI/CD
+
+on:
+  push:
+    paths:
+      - 'app/pkg/database/liquibase/**'  # Исправлено: добавлен app/
+    branches: [main, develop]
+  pull_request:
+    paths:
+      - 'app/pkg/database/liquibase/**'  # Исправлено: добавлен app/
+  workflow_dispatch:  # Добавлено: возможность ручного запуска
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Liquibase
+        run: |
+          wget -q https://github.com/liquibase/liquibase/releases/download/v4.24.0/liquibase-4.24.0.tar.gz
+          tar -xzf liquibase-4.24.0.tar.gz
+          sudo mv liquibase /usr/local/bin/
+          liquibase --version
+
+      - name: Validate Liquibase changelogs
+        run: |
+          liquibase \
+            --changeLogFile=app/pkg/database/liquibase/changelog/db.changelog-master.xml \
+            validate
+      
+      - name: Check for duplicate changeSet IDs
+        run: |
+          # Проверка уникальности ID миграций
+          ! grep -r 'changeSet id=' app/pkg/database/liquibase/changelog/ | cut -d'"' -f2 | sort | uniq -d | grep .
+
+  test-migration:
+    needs: validate
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Liquibase
+        run: |
+          wget -q https://github.com/liquibase/liquibase/releases/download/v4.24.0/liquibase-4.24.0.tar.gz
+          tar -xzf liquibase-4.24.0.tar.gz
+          sudo mv liquibase /usr/local/bin/
+          liquibase --version
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in {1..10}; do
+            if pg_isready -h localhost -p 5432 -U postgres; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+      - name: Test migrations on clean database
+        run: |
+          liquibase \
+            --url=jdbc:postgresql://localhost:5432/testdb \
+            --username=postgres \
+            --password=test \
+            --changeLogFile=app/pkg/database/liquibase/changelog/db.changelog-master.xml \
+            --log-level=info \
+            update
+      
+      - name: Test rollback
+        run: |
+          liquibase \
+            --url=jdbc:postgresql://localhost:5432/testdb \
+            --username=postgres \
+            --password=test \
+            --changeLogFile=app/pkg/database/liquibase/changelog/db.changelog-master.xml \
+            rollbackCount 1
+
+      - name: Verify database state
+        run: |
+          # Проверка что таблицы созданы
+          PGPASSWORD=test psql -h localhost -U postgres -d testdb -c "\dt"
+          # Проверка что миграции записаны
+          PGPASSWORD=test psql -h localhost -U postgres -d testdb -c "SELECT * FROM databasechangelog;"
+
+  deploy-staging:
+    needs: test-migration
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-24.04
+    environment: staging
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Liquibase
+        run: |
+          wget -q https://github.com/liquibase/liquibase/releases/download/v4.24.0/liquibase-4.24.0.tar.gz
+          tar -xzf liquibase-4.24.0.tar.gz
+          sudo mv liquibase /usr/local/bin/
+          liquibase --version
+
+      - name: Dry run for staging
+        run: |
+          liquibase \
+            --url=${{ secrets.STAGING_DB_URL }} \
+            --username=${{ secrets.STAGING_DB_USER }} \
+            --password=${{ secrets.STAGING_DB_PASSWORD }} \
+            --changeLogFile=app/pkg/database/liquibase/changelog/db.changelog-master.xml \
+            --log-level=info \
+            updateSQL > staging-dry-run.sql
+          
+          echo "SQL that will be executed:"
+          cat staging-dry-run.sql
+
+      - name: Deploy migrations to staging
+        run: |
+          liquibase \
+            --url=${{ secrets.STAGING_DB_URL }} \
+            --username=${{ secrets.STAGING_DB_USER }} \
+            --password=${{ secrets.STAGING_DB_PASSWORD }} \
+            --changeLogFile=app/pkg/database/liquibase/changelog/db.changelog-master.xml \
+            --log-level=info \
+            update
+
+  deploy-production:
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Liquibase
+        run: |
+          wget -q https://github.com/liquibase/liquibase/releases/download/v4.24.0/liquibase-4.24.0.tar.gz
+          tar -xzf liquibase-4.24.0.tar.gz
+          sudo mv liquibase /usr/local/bin/
+          liquibase --version
+
+      - name: Dry run on production
+        run: |
+          liquibase \
+            --url=${{ secrets.PROD_DB_URL }} \
+            --username=${{ secrets.PROD_DB_USER }} \
+            --password=${{ secrets.PROD_DB_PASSWORD }} \
+            --changeLogFile=app/pkg/database/liquibase/changelog/db.changelog-master.xml \
+            updateSQL > production-dry-run.sql
+          
+          echo "SQL that will be executed on production:"
+          cat production-dry-run.sql
+      
+      - name: Manual approval
+        run: |
+          echo "=========================================="
+          echo "✅ DRY RUN COMPLETED - REVIEW SQL ABOVE"
+          echo "=========================================="
+          echo "To proceed with production deployment:"
+          echo "1. Review the SQL output"
+          echo "2. Approve in GitHub Actions UI"
+          echo "=========================================="
+
+      - name: Deploy to production
+        run: |
+          liquibase \
+            --url=${{ secrets.PROD_DB_URL }} \
+            --username=${{ secrets.PROD_DB_USER }} \
+            --password=${{ secrets.PROD_DB_PASSWORD }} \
+            --changeLogFile=app/pkg/database/liquibase/changelog/db.changelog-master.xml \
+            --log-level=info \
+            update
+
+  status:
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check deployment status
+        run: |
+          echo "📊 Deployment Summary:"
+          echo "- Validate: ${{ needs.validate.result }}"
+          echo "- Test Migration: ${{ needs.test-migration.result }}"
+          echo "- Deploy Staging: ${{ needs.deploy-staging.result }}"
+          echo "- Deploy Production: ${{ needs.deploy-production.result }}"

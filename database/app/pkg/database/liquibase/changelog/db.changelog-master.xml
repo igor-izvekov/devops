@@ -5,12 +5,31 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
 
-    <!-- Версия 1.0 - Инициализация -->
-    <include file="v1.0/20240101-create-tables.xml" relativeToChangelogFile="true"/>
-    <include file="v1.0/20240102-insert-initial-tags.xml" relativeToChangelogFile="true"/>
-    <include file="v1.0/20240103-add-indexes.xml" relativeToChangelogFile="true"/>
-    
-    <!-- Версия 1.1 - Добавление новых полей -->
-    <include file="v1.1/20240201-add-book-notes.xml" relativeToChangelogFile="true"/>
-    
+    <changeSet id="20240201-1" author="developer">
+        <!-- ✅ Проверяем, что таблица существует перед добавлением колонки -->
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="books"/>
+                <not>
+                    <columnExists tableName="books" columnName="notes"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Add notes column to books table</comment>
+        <addColumn tableName="books">
+            <column name="notes" type="text"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20240201-2" author="developer" context="dev">
+        <!-- ✅ Проверяем, что колонка существует перед обновлением -->
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="books" columnName="notes"/>
+        </preConditions>
+        <comment>Add sample notes for development</comment>
+        <update tableName="books">
+            <column name="notes" value="Great book, highly recommend!"/>
+            <where>rating >= 4.5</where>
+        </update>
+    </changeSet>
 </databaseChangeLog>

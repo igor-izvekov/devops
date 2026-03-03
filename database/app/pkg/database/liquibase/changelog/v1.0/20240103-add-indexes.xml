@@ -9,19 +9,19 @@
         <comment>Add indexes for better performance</comment>
 
         <createIndex tableName="books" indexName="idx_books_title">
-            <column name="title" />
+            <column name="title"></column>
         </createIndex>
 
         <createIndex tableName="books" indexName="idx_books_author">
-            <column name="author"/>
+            <column name="author"></column>
         </createIndex>
 
         <createIndex tableName="books" indexName="idx_books_read_status">
-            <column name="read_status">
+            <column name="read_status"></column>
         </createIndex>
 
         <createIndex tableName="tags" indexName="idx_tags_name">
-            <column name="name"/>
+            <column name="name"></column>
         </createIndex>
     </changeSet>
 </databaseChangeLog>
