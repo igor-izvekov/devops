@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'database/app/pkg/database/liquibase/**'  # Исправлено: добавлен app/
-    branches: [main, develop]
+    branches: [main, database]
   pull_request:
     paths:
       - 'database/app/pkg/database/liquibase/**'  # Исправлено: добавлен app/
