@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <!-- Версия 1.0 - Инициализация -->
+    <include file="v1.0/20240101-create-tables.xml" relativeToChangelogFile="true"/>
+    <include file="v1.0/20240102-insert-initial-tags.xml" relativeToChangelogFile="true"/>
+    <include file="v1.0/20240103-add-indexes.xml" relativeToChangelogFile="true"/>
+    
+    <!-- Версия 1.1 - Добавление новых полей -->
+    <include file="v1.1/20240201-add-book-notes.xml" relativeToChangelogFile="true"/>
+    
+</databaseChangeLog>

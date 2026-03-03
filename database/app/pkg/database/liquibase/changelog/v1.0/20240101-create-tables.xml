@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="20240101-1" author="developer">
+        <comment>Create books table</comment>
+        <createTable tableName="books">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_at" type="timestamp"/>
+            <column name="title" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="author" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="isbn" type="varchar(13)">
+                <constraints unique="true"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="rating" type="float" defaultValueNumeric="0"/>
+            <column name="read_status" type="varchar(20)" defaultValue="unread"/>
+            <column name="pages" type="int"/>
+            <column name="current_page" type="int" defaultValueNumeric="0"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20240101-2" author="developer">
+        <comment>Create tags table</comment>
+        <createTable tableName="tags">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(50)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20240101-3" author="developer">
+        <comment>Create book_tags junction table</comment>
+        <createTable tableName="book_tags">
+            <column name="book_id" type="bigint">
+                <constraints nullable="false"
+                           foreignKeyName="fk_book_tags_book"
+                           references="books(id)"/>
+            </column>
+            <column name="tag_id" type="bigint">
+                <constraints nullable="false"
+                           foreignKeyName="fk_book_tags_tag"
+                           references="tags(id)"/>
+            </column>
+        </createTable>
+        
+        <addPrimaryKey tableName="book_tags" 
+                       columnNames="book_id, tag_id"
+                       constraintName="pk_book_tags"/>
+    </changeSet>
+</databaseChangeLog>

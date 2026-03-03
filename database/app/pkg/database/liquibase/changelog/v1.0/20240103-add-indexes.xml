@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="20240103-1" author="developer">
+        <comment>Add indexes for better performance</comment>
+
+        <createIndex tableName="books" indexName="idx_books_title">
+            <column name="title" />
+        </createIndex>
+
+        <createIndex tableName="books" indexName="idx_books_author">
+            <column name="author"/>
+        </createIndex>
+
+        <createIndex tableName="books" indexName="idx_books_read_status">
+            <column name="read_status">
+        </createIndex>
+
+        <createIndex tableName="tags" indexName="idx_tags_name">
+            <column name="name"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

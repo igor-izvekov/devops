@@ -1,0 +1,57 @@
+version: '5'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/bookmanager?sslmode=disable
+      - ALLOW_ORIGIN=http://localhost:3000
+      - PORT=8080
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - bookmanager-network
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=bookmanager
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookmanager-network
+  
+  liquibase:
+    image: liquibase/liquibase:5
+    volumes:
+      - ./database/liquibase/changelog:/liquibase/changelog
+    command:
+      - --url=jdbc:postgresql://db:5432/bookmanager
+      - --username=postgres
+      - --password=postgres
+      - --changeLogFile=changelog/db.changelog-master.xml
+      - update
+    depends_on:
+      db:
+        condition: service_healthy
+      networks:
+      - bookmanager-network
+
+volumes:
+  postgres_data:
+
+networks:
+  bookmanager-network:
+    driver: bridge
