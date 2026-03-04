@@ -1,0 +1,24 @@
+filebeat.inputs:
+  - type: container
+    paths:
+      - 'var/lib/docker/containers/*/*.log'
+    processors:
+      - add_docker_metadata: ~
+  
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/*.log
+      - /var/log/nginx/*.log
+      - /var/log/mysql/*.log
+
+output.kafka:
+  hosts: ["kafka:9092"]
+  topic: 'raw-logs'
+  partition.round_robin:
+    reachable_only: false
+  required_acks: 1
+  compression: gzip
+  max_message_bytes: 1000000
+
+logging.level: info
