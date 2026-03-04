@@ -51,7 +51,64 @@ services:
       - elasticsearch
       - logstash
       - kafka
+
+  geo-enricher:
+    build: ./enrichers
+    command: python geo_enricher.py
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - GEOIP_DB_PATH=/data/GeoLite2-City.mmdb
+    volumes:
+      - ./enrichers:/app
+      - geoip_data:/data
+    depends_on:
+      - kafka
+    restart: unless-stopped
+
+  dns-enricher:
+    build: ./enrichers
+    command: python dns_enricher.py
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    volumes:
+      - ./enrichers:/app
+    depends_on:
+      - kafka
+    restart: unless-stopped
+
+  pii-masker:
+    build: ./enrichers
+    command: python pii_masker.py
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    volumes:
+      - ./enrichers:/app
+    depends_on:
+      - kafka
+    restart: unless-stopped
+
+  anomaly-detector:
+    build: ./enrichers
+    command: python anomaly_detector.py
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    volumes:
+      - ./enriches:/app
+      - ./models:/models
+    depends_on:
+      - kafka
+    restart: unless-stopped
   
+  jupiter:
+    image: jupyter/datascience-notebook:latest
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./data:/home/jovyan/data
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: start-notebook.sh --NotebookApp.token
 
 volumes:
   es_data:
