@@ -1,0 +1,83 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'production'
+    cluster: 'main'
+  
+# Правила для алертов и предварительных вычислений
+rule_files:
+  - "rules/node_alerts.yml"
+  - "rules/container_alerts.yml"
+  - "rules/application_alerts.yml"
+  - "rules/recording_rules.yml"
+
+# Настройка алертов
+alerting:
+  alertmanagers:
+    - static_configs:
+      - targets: ['alertmanager:9093']
+
+# Настройка сборщиков
+scrape_configs:
+  # Сам Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+  
+# Настройка сборщиков
+scrape_configs:
+  # Сам Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    
+  # Node Exporter (метрики OC)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    metrics_path: /metrics
+  
+  # cAdvisor (метрики контейнеров)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metrics_path: /metrics
+  
+  # Blackbox (проверка эндпоинтов)
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://prometheus:9090
+        - http://grafana:3000
+        - http://localhost:8080
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+  
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql-exporter:9104']
+  
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+  
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+  
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+  
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch-exporter:9114']

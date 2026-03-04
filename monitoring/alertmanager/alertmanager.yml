@@ -1,0 +1,126 @@
+global:
+  telegram_api_url:
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default-receiver'
+
+# Маршруты по важности
+routes:
+  - match:
+      severity: critical
+    receiver: telegram-critical
+    continue: true
+
+  - match:
+      severity: warning
+    receiver: telegram-warning
+  
+  # Инфо-алерты (низкий приоритет)
+  - match:
+      severity: info
+    receiver: telegram-info
+  
+  # Алерты по категориям
+  - match_re:
+      service: ^(database|postgres|mysql|redis)$
+    receiver: telegram-database
+  
+  - match:
+      service: kubernetes
+    receiver: telegram-k8s
+  
+receivers:
+  # Критичные алерты
+  - name: 'telegram-critical'
+    telegram_configs:
+      - bot_token: 'TOKEN'
+        chat_id: 111
+        message: |
+          *CRITICAL ALERT*
+
+          *Alert*: {{ .GroupLabels.alertname }}
+          *Cluster* {{ .GroupLabels.cluster }}
+          *Description:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+        parse_mode: 'MarkdownV2'
+        disable_notifications: false
+        # Для топиков в группах (если используете Topics в Telegram)
+        # message_thread_id: 1
+  
+  # Предупреждения
+  - name: 'telegram-warning'
+    telegram_configs:
+      - bot_token: 'TOKEN'
+        chat_id: 111
+        message: |
+          *WARNING ALERT*
+
+          *Alert*: {{ .GroupLabels.alertname }}
+          *Cluster* {{ .GroupLabels.cluster }}
+          *Description:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+        parse_mode: 'MarkdownV2'
+  
+  # Информационные алерты
+  - name: 'telegram-info'
+    telegram_configs:
+      - bot_token: 'TOKEN'
+        chat_id: 111
+        message: |
+          *INFO*
+
+          *Alert*: {{ .GroupLabels.alertname }}
+          *Cluster* {{ .GroupLabels.cluster }}
+          *Description:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+        parse_mode: 'MarkdownV2'
+  
+  # Алерты по базам данных
+  - name: 'telegram-database'
+    telegram_configs:
+      - bot_token: 'TOKEN'
+        chat_id: 111
+        message: |
+          *CRITICAL ALERT*
+
+          *Alert*: {{ .GroupLabels.alertname }}
+          *Cluster* {{ .GroupLabels.cluster }}
+          *Description:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+        parse_mode: 'MarkdownV2'
+
+  # Kubernetes алерты
+  - name: 'telegram-k8s'
+    telegram_configs:
+      - bot_token: 'TOKEN'
+        chat_id: 111
+        message: |
+          *CRITICAL ALERT*
+
+          *Alert*: {{ .GroupLabels.alertname }}
+          *Cluster* {{ .GroupLabels.cluster }}
+          *Description:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+        parse_mode: 'MarkdownV2'
+
+# Правила подавления (чтобы не спамить)
+inhibit_rules:
+  # Если упал узел, не слать алерты про контейнеры на нем
+  - source_match:
+      severity: critical
+      alertname: InstanceDown
+    target_match:
+      severity: warning
+    equal: ['instance']
+  
+  # Если проблема с кластером, не слать алерты про отдельные компоненты
+  - source_match:
+      severity: critical
+      alertname: ClusterDown
+    target_match:
+      severity: warning
+    equal: ['cluster']

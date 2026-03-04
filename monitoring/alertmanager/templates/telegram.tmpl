@@ -1,0 +1,47 @@
+{{/*
+Telegram template for alerts
+}}
+
+{{ define "telegram.default.message" }}
+{{- if eq .Status "firing" -}}
+*FIRING: {{ .Alerts.Firing | len }} alert(s)*
+{{- else -}}
+*RESOLVED: {{ .Alerts.Resolved | len }} alert(s)*
+{{- end -}}
+
+{{ range .Alerts }}
+*Alert:* {{ .Labels.alertname }}
+*Severity:* {{ .Labels.severity }}
+*State:* {{ .Status }}
+
+*Description:*
+{{ .Annotations.description }}
+
+*Summary:*
+{{ .Annotations.description }}
+
+*Labels:*
+{{ range $key, $value := .Labels }} {{ $key }}: `{{ $value }}`
+{{ end }}
+
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+{{- if .EndsAt }}
+*Ended:* {{ .EndsAt.Format "2006-01-02 15:04:05" }}
+{{- end }}
+{{ end }}
+{{ end }}
+
+{{ define "telegram.critical.message" }}
+*CRITICAL ALERTS*
+{{ template "telegram.default.message" . }}
+{{ end }}
+
+{{ define "telegram.warning.message" }}
+*WARNING ALERTS*
+{{ template "telegram.default.message" . }}
+{{ end }}
+
+{{ define "telegram.resolved.message" }}
+*RESOLVED ALERTS*
+{{ template "telegram.default.message" . }}
+{{ end }}
